@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Кубо-память</title>
+<style>
+  body {
+    margin: 0;
+    background: #222;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+  h1 {
+    margin: 20px 0 5px;
+    font-weight: 900;
+    font-size: 32px;
+    letter-spacing: 1.3px;
+    color: #0af;
+    text-shadow: 0 0 8px #0af99;
+  }
+  #info {
+    margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 18px;
+    position: relative;
+    width: 320px;
+    text-align: center;
+  }
+  #btnRestartLevel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    filter: invert(0.7);
+  }
+  #btnRestartLevel:hover {
+    filter: invert(1);
+  }
+  #btnRestartLevel svg {
+    width: 100%;
+    height: 100%;
+    stroke: #0af;
+    stroke-width: 3;
+    fill: none;
+    transition: stroke 0.3s;
+  }
+  #btnRestartLevel:hover svg {
+    stroke: #08c;
+  }
+  #game {
+    position: relative;
+    background: #333;
+    margin: 10px 0;
+  }
+  #grid {
+    display: grid;
+    gap: 5px;
+    background: #222;
+    border: 3px solid #0af;
+    user-select: none;
+  }
+  .cell {
+    background: #555;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    overflow: visible;
+  }
+  .cell.highlight {
+    background: #0af;
+    box-shadow: 0 0 15px #0af;
+  }
+  .cube {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #0af;
+    border-radius: 4px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.2);
+    animation: cubeGrow 0.3s forwards;
+    pointer-events: none;
+  }
+  @keyframes cubeGrow {
+    to {
+      transform: translate(-50%, -50%) scale(1);
+      box-shadow: 0 0 10px #0af;
+    }
+  }
+  #message {
+    min-height: 40px;
+    margin: 10px 0;
+    font-weight: bold;
+    font-size: 18px;
+    text-align: center;
+    max-width: 320px;
+  }
+  #controls {
+    margin: 10px;
+    width: 320px;
+    display: flex;
+    justify-content: center;
+  }
+  button {
+    font-size: 16px;
+    padding: 6px 12px;
+    margin: 0 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    background: #0af;
+    color: #fff;
+    transition: background 0.3s;
+    user-select: none;
+  }
+  button:hover:not(:disabled) {
+    background: #08c;
+  }
+  button:disabled {
+    background: #444;
+    cursor: default;
+  }
+  #tutorial {
+    max-width: 600px;
+    background: #111;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    line-height: 1.4;
+  }
+  #startScreen {
+    width: 320px;
+    height: 360px;
+    background: #111;
+    border: 3px solid #0af;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: default;
+    margin: 20px 0;
+  }
+  #startScreen:hover {
+    background: #155;
+  }
+  #startIcon {
+    width: 0; 
+    height: 0; 
+    border-top: 40px solid transparent;
+    border-bottom: 40px solid transparent; 
+    border-left: 70px solid #0af;
+    transform: rotate(90deg);
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  #console {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    border: 2px solid #0af;
+    border-radius: 8px;
+    padding: 8px;
+    width: 300px;
+    display: none;
+    z-index: 1000;
+  }
+  #console input {
+    width: 100%;
+    font-size: 16px;
+    padding: 6px;
+    background: #222;
+    border: none;
+    color: #0af;
+    outline: none;
+    font-family: monospace;
+  }
+  #console input::placeholder {
+    color: #066;
+  }
+  #startButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 220px;
+  }
+
+  /* Оверлей модального окна загрузки */
+  #loadOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right:0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+  #loadBox {
+    background: #222;
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 0 20px #0af;
+  }
+  #loadBox h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  #saveList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  #saveList li {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    background: #333;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.3s;
+    user-select: none;
+  }
+  #saveList li:hover {
+    background: #0af;
+    color: #000;
+  }
+  #saveList li button {
+    background: #08c;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  #saveList li button:hover {
+    background: #06a;
+  }
+  #closeLoadBtn {
+    margin-top: 15px;
+    width: 100%;
+    background: #0af;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #closeLoadBtn:hover {
+    background: #08c;
+  }
+</style>
+</head>
+<body>
+
+<h1>Кубо-память</h1>
+<div id="info">
+  Уровень: <span id="level">0</span> / 101
+  <button id="btnRestartLevel" title="Начать уровень заново (без повторной последовательности)" aria-label="Перезапуск уровня">
+    <svg viewBox="0 0 24 24" style="width:100%;height:100%;stroke:#0af;stroke-width:3;fill:none;">
+      <path d="M4 4v6h6" />
+      <path d="M20 20a8 8 0 1 0-8 8" />
+    </svg>
+  </button>
+</div>
+<div id="message"></div>
+
+<div id="startScreen">
+  <div id="startIcon" title="Начать игру"></div>
+  <div id="startButtons">
+    <button id="btnStartGame" title="Начать игру с уровня 0">Начать игру</button>
+    <button id="btnSaveProgress" title="Сохранить текущий уровень">Сохранить прогресс</button>
+    <button id="btnLoadProgress" title="Загрузить сохранённый уровень">Загрузить прогресс</button>
+  </div>
+</div>
+
+<div id="game" style="display:none;">
+  <div id="grid"></div>
+</div>
+
+<div id="controls" style="display:none;">
+  <button id="btnShowSequence">Показать последовательность (D)</button>
+  <button id="btnNextLevel" disabled>Следующий уровень</button>
+  <button id="btnReplay" style="display:none;">Переиграть уровень</button>
+</div>
+
+<div id="tutorial" style="display:none;">
+  <h2>Обучение (Уровень 0)</h2>
+  <p>Нажмите кнопку "Показать последовательность" или клавишу D, чтобы увидеть порядок кубиков.</p>
+  <p>После просмотра последовательности повторяйте её кликами по кубикам.</p>
+</div>
+
+<div id="console">
+  <input type="text" id="consoleInput" placeholder="Введите команду: /номер_уровня (1-101)" autocomplete="off" />
+</div>
+
+<!-- Оверлей загрузки -->
+<div id="loadOverlay">
+  <div id="loadBox">
+    <h3>Выберите сохранение</h3>
+    <ul id="saveList"></ul>
+    <button id="closeLoadBtn">Закрыть</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const grid = document.getElementById('grid');
+  const messageEl = document.getElementById('message');
+  const levelEl = document.getElementById('level');
+  const btnShowSequence = document.getElementById('btnShowSequence');
+  const btnNextLevel = document.getElementById('btnNextLevel');
+  const btnRestartLevel = document.getElementById('btnRestartLevel');
+  const btnReplay = document.getElementById('btnReplay');
+  const tutorial = document.getElementById('tutorial');
+  const startScreen = document.getElementById('startScreen');
+  const gameDiv = document.getElementById('game');
+  const controlsDiv = document.getElementById('controls');
+  const consoleDiv = document.getElementById('console');
+  const consoleInput = document.getElementById('consoleInput');
+
+  const btnStartGame = document.getElementById('btnStartGame');
+  const btnSaveProgress = document.getElementById('btnSaveProgress');
+  const btnLoadProgress = document.getElementById('btnLoadProgress');
+
+  const loadOverlay = document.getElementById('loadOverlay');
+  const saveList = document.getElementById('saveList');
+  const closeLoadBtn = document.getElementById('closeLoadBtn');
+
+  let level = 0;
+  const maxLevel = 101;
+
+  let sequence = [];
+  let playerInput = [];
+  let canClick = false;
+  let replaying = false;
+  let inConsoleMode = false;
+  let savedLevelBeforeConsole = null;
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function gridSizeForLevel(lvl) {
+    if (lvl === 100 || lvl === 101) return 10;
+    if (lvl >= 10) return 8;
+    if (lvl >= 5) return 5;
+    return 3;
+  }
+
+  function sequenceLengthForLevel(lvl) {
+    return Math.min(3 + Math.floor(lvl / 2), 20);
+  }
+
+  function createGrid(size) {
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    grid.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+    grid.style.width = size * 50 + (size - 1) * 5 + 'px';
+    grid.style.height = size * 50 + (size - 1) * 5 + 'px';
+
+    for (let i = 0; i < size * size; i++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      cell.dataset.index = i;
+      cell.style.width = '50px';
+      cell.style.height = '50px';
+      grid.appendChild(cell);
+    }
+  }
+
+  function generateSequence(size, length) {
+    const maxIndex = size * size;
+    const seq = [];
+    while (seq.length < length) {
+      const r = Math.floor(Math.random() * maxIndex);
+      if (!seq.includes(r)) seq.push(r);
+    }
+    return seq;
+  }
+
+  async function showSequence(times = 1) {
+    canClick = false;
+    btnShowSequence.disabled = true;
+    btnReplay.style.display = 'none';
+    btnNextLevel.disabled = true;
+    messageEl.textContent = 'Смотри внимательно...';
+
+    for (let t = 0; t < times; t++) {
+      for (let index of sequence) {
+        const cell = grid.querySelector(`.cell[data-index='${index}']`);
+        cell.classList.add('highlight');
+        await sleep(400);
+        cell.classList.remove('highlight');
+        await sleep(200);
+      }
+      await sleep(400);
+    }
+
+    messageEl.textContent = 'Теперь твоя очередь! Кликайте по кубикам в правильном порядке.';
+    canClick = true;
+    playerInput = [];
+    btnShowSequence.disabled = true;
+    btnReplay.style.display = 'inline-block';
+  }
+
+  function resetCells() {
+    grid.querySelectorAll('.cell').forEach(cell => {
+      cell.classList.remove('correct', 'incorrect', 'highlight');
+      const existingCube = cell.querySelector('.cube');
+      if (existingCube) existingCube.remove();
+    });
+  }
+
+  function createCubeInCell(cell) {
+    const cube = document.createElement('div');
+    cube.classList.add('cube');
+    cell.appendChild(cube);
+  }
+
+  function startLevel(lvl, showSequenceFlag = false) {
+    level = lvl;
+    levelEl.textContent = level;
+    btnNextLevel.disabled = true;
+    playerInput = [];
+    resetCells();
+    canClick = false;
+    replaying = !showSequenceFlag;
+
+    btnShowSequence.disabled = false;
+    btnShowSequence.style.display = 'inline-block';
+    btnReplay.style.display = 'none';
+    tutorial.style.display = level === 0 ? 'block' : 'none';
+    messageEl.textContent = 'Нажмите кнопку "Показать последовательность" или клавишу D, чтобы увидеть последовательность.';
+    gameDiv.style.display = 'block';
+    controlsDiv.style.display = 'flex';
+    startScreen.style.display = 'none';
+
+    const size = gridSizeForLevel(level);
+    createGrid(size);
+    sequence = generateSequence(size, sequenceLengthForLevel(level));
+
+    if (showSequenceFlag) {
+      if (level <= 3) {
+        showSequence(3);
+      } else {
+        showSequence(1);
+      }
+    }
+  }
+
+  async function onCellClick(e) {
+    if (!canClick) return;
+    const cell = e.target;
+    if (!cell.classList.contains('cell')) return;
+    if (playerInput.includes(cell.dataset.index)) return;
+
+    const idx = Number(cell.dataset.index);
+    playerInput.push(idx);
+
+    createCubeInCell(cell);
+
+    if (idx === sequence[playerInput.length - 1]) {
+      cell.classList.add('correct');
+      if (playerInput.length === sequence.length) {
+        canClick = false;
+        messageEl.textContent = 'Отлично! Уровень пройден.';
+        btnNextLevel.disabled = false;
+        btnReplay.style.display = 'none';
+        btnShowSequence.disabled = true;
+
+        if (inConsoleMode) {
+          inConsoleMode = false;
+          setTimeout(() => {
+            messageEl.textContent = `Возвращаемся к уровню ${savedLevelBeforeConsole}`;
+            startLevel(savedLevelBeforeConsole);
+          }, 1500);
+        }
+      }
+    } else {
+      cell.classList.add('incorrect');
+      canClick = false;
+      messageEl.textContent = 'Ошибка! Попробуйте снова.';
+      btnReplay.style.display = 'inline-block';
+      btnShowSequence.disabled = true;
+    }
+  }
+
+  btnShowSequence.addEventListener('click', () => {
+    if (level <= 3) {
+      showSequence(3);
+    } else {
+      showSequence(1);
+    }
+  });
+
+  btnNextLevel.addEventListener('click', () => {
+    if (level < maxLevel) {
+      startLevel(level + 1);
+    } else {
+      messageEl.textContent = 'Поздравляем! Вы прошли все уровни! 🎉';
+      btnNextLevel.disabled = true;
+      btnShowSequence.disabled = true;
+      canClick = false;
+      btnReplay.style.display = 'none';
+    }
+  });
+
+  btnReplay.addEventListener('click', () => {
+    startLevel(level, false);
+  });
+
+  btnRestartLevel.addEventListener('click', () => {
+    startLevel(level, false);
+  });
+
+  btnStartGame.addEventListener('click', () => {
+    startLevel(0);
+  });
+
+  btnSaveProgress.addEventListener('click', () => {
+    // Сохраняем уровень с временной меткой
+    const saves = JSON.parse(localStorage.getItem('memoryGameSaves') || '[]');
+    // Проверим есть ли текущее сохранение уже
+    const existingIndex = saves.findIndex(s => s.level === level);
+    if (existingIndex >= 0) {
+      saves[existingIndex].date = Date.now();
+    } else {
+      saves.push({level: level, date: Date.now()});
+    }
+    localStorage.setItem('memoryGameSaves', JSON.stringify(saves));
+    alert(`Прогресс сохранён! Уровень: ${level}`);
+  });
+
+  btnLoadProgress.addEventListener('click', () => {
+    showLoadOverlay();
+  });
+
+  closeLoadBtn.addEventListener('click', () => {
+    loadOverlay.style.display = 'none';
+  });
+
+  function showLoadOverlay() {
+    saveList.innerHTML = '';
+    const saves = JSON.parse(localStorage.getItem('memoryGameSaves') || '[]');
+    if (saves.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = 'Нет сохранений';
+      saveList.appendChild(li);
+    } else {
+      // Сортируем по дате (новые сверху)
+      saves.sort((a, b) => b.date - a.date);
+      for (const save of saves) {
+        const li = document.createElement('li');
+        const dateStr = new Date(save.date).toLocaleString();
+        li.textContent = `Уровень ${save.level} (сохранено: ${dateStr})`;
+
+        const loadBtn = document.createElement('button');
+        loadBtn.textContent = 'Загрузить';
+        loadBtn.addEventListener('click', () => {
+          loadOverlay.style.display = 'none';
+          startLevel(save.level);
+        });
+        li.appendChild(loadBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Удалить';
+        delBtn.style.marginLeft = '8px';
+        delBtn.addEventListener('click', () => {
+          const idx = saves.findIndex(s => s.level === save.level && s.date === save.date);
+          if (idx >= 0) {
+            saves.splice(idx, 1);
+            localStorage.setItem('memoryGameSaves', JSON.stringify(saves));
+            showLoadOverlay();
+          }
+        });
+        li.appendChild(delBtn);
+
+        saveList.appendChild(li);
+      }
+    }
+    loadOverlay.style.display = 'flex';
+  }
+
+  // Клик по игровому полю
+  grid.addEventListener('click', onCellClick);
+
+  // Консольный ввод /ё или /~
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ё' || e.key === '`') {
+      e.preventDefault();
+      toggleConsole();
+    }
+    if (e.key.toLowerCase() === 'd' && !canClick) {
+      // Кнопка D для показа последовательности (только если сейчас нельзя кликать)
+      if (level <= 3) {
+        showSequence(3);
+      } else {
+        showSequence(1);
+      }
+    }
+  });
+
+  consoleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = consoleInput.value.trim();
+      if (val.startsWith('/')) {
+        const lvlNum = parseInt(val.substring(1), 10);
+        if (!isNaN(lvlNum) && lvlNum >= 1 && lvlNum <= maxLevel) {
+          savedLevelBeforeConsole = level;
+          inConsoleMode = true;
+          messageEl.textContent = `Консоль: переход на уровень ${lvlNum}`;
+          startLevel(lvlNum);
+          toggleConsole(false);
+          consoleInput.value = '';
+        } else {
+          alert('Введите команду в формате /номер_уровня (от 1 до 101)');
+        }
+      } else {
+        alert('Команда должна начинаться с "/"');
+      }
+    }
+  });
+
+  function toggleConsole(show) {
+    if (typeof show === 'boolean') {
+      consoleDiv.style.display = show ? 'block' : 'none';
+      if (show) consoleInput.focus();
+    } else {
+      if (consoleDiv.style.display === 'block') {
+        consoleDiv.style.display = 'none';
+      } else {
+        consoleDiv.style.display = 'block';
+        consoleInput.focus();
+      }
+    }
+  }
+
+  // Стартовая инициализация
+  startScreen.style.display = 'flex';
+  gameDiv.style.display = 'none';
+  controlsDiv.style.display = 'none';
+  tutorial.style.display = 'none';
+  messageEl.textContent = 'Добро пожаловать в игру Кубо-память! Начните игру.';
+
+})();
+</script>
+
+</body>
+</html>
